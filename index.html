@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="UTF-8">
+    <title>Statler: STATe-maintaining Language models for Embodied Reasoning</title>
+    <meta name="description"
+          content="Large language models (LLMs) provide a promising tool that enable robots to perform complex robot reasoning tasks. However, the limited context window of contemporary LLMs makes reasoning over long time horizons difficult.
+          Robotic planning tasks typically involve processing information encountered a long time ago such as loop closure. What is worse, robotic actions can be repetitive or back-and-forth, making it particularly difficult for LLMs to accurately track the world states using their internal representations. In this paper, we propose Statler, a framework that endows LLMs with an external world state model accompanied by two instances of general LLMs---a world-model reader and a world-model writer---that explicitly track and anticipate world state updates. Statler improves the capacity of existing LLMs for reasoning over longer time horizons.
+          We evaluate the effectiveness of our approach on various table-top manipulation domains, and show that it improves the state-of--the-art in LLM-based robot reasoning.
+                ">
+    <meta name="keywords" content="Large Language Models, Long-Horizon Planning, World State Model">
+    <meta name="author" content="Takuma Yoneda (takuma@ttic.edu), Jiading Fang (fjd@ttic.edu), Peng Li (lip21@m.fudan.edu.cn), Huanyu Zhang (huanyu@uchicago.edu), Tianchong Jiang (tianchongj@uchicago.edu), Ben Picker (bpicker@uchicago.edu), David Yunis (dyunis@ttic.edu), Shengjie Lin (slin@ttic.edu), Luzhe Sun (luzhesun@uchicago.edu), Richard Xu (richard1xur@uchicago.edu), Hongyuan Mei (hongyuan@ttic.edu), Matthew R. Walter (mwalter@ttic.edu)">
+    <meta property="og:title" content="Statler: STATe-maintaining Language models for Embodied Reasoning">
+    <meta property="og:image" content="media/thumbnail.jpg">
+    <meta name="twitter:creator" content="@jiading_fang">
+    <meta name="twitter:card" content="summary">
+    <meta property="og:description"
+          content="Large language models (LLMs) provide a promising tool that enable robots to perform complex robot reasoning tasks. However, the limited context window of contemporary LLMs makes reasoning over long time horizons difficult.
+          Robotic planning tasks typically involve processing information encountered a long time ago such as loop closure. What is worse, robotic actions can be repetitive or back-and-forth, making it particularly difficult for LLMs to accurately track the world states using their internal representations. In this paper, we propose Statler, a framework that endows LLMs with an external world state model accompanied by two instances of general LLMs---a world-model reader and a world-model writer---that explicitly track and anticipate world state updates. Statler improves the capacity of existing LLMs for reasoning over longer time horizons.
+          We evaluate the effectiveness of our approach on various table-top manipulation domains, and show that it improves the state-of--the-art in LLM-based robot reasoning.
+                ">
+    <link rel="stylesheet" href="./style.css">
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script type="text/javascript" id="MathJax-script" async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+    </script>
+
+</head>
+<body>
+<article>
+    <section id="frontmatter">
+        <h1>Statler: STATe-maintaining Language models</br></br>for Embodied Reasoning</h1>
+        <h2 id="authors" style="margin-bottom: 0;">
+            <a href="https://takuma.yoneda.xyz">Takuma Yoneda</a><sup>1</sup>,
+            <a href="https://sites.google.com/view/jiadingfang">Jiading Fang</a><sup>1</sup>,
+            Peng Li <sup>2</sup>,
+            Huanyu Zhang <sup>3</sup>,
+            Tianchong Jiang <sup>3</sup>,
+            Ben Picker <sup>3</sup>,
+            David Yunis <sup>1</sup>,
+            Shengjie Lin <sup>1</sup>,
+            <a href="https://tllokn.github.io/">Luzhe Sun</a><sup>3</sup>,
+            Richard Xu <sup>3</sup>,
+            <!-- </br></br> -->
+            <a href="https://www.hongyuanmei.com/">Hongyuan Mei </a><sup>1</sup>,
+            <a href="https://ttic.edu/walter">Matthew R. Walter </a><sup>1</sup>
+        </h2>
+        <h3 style="margin-top: 10px;"><sup>1</sup>TTI-Chicago, <sup>2</sup>Fudan University, <sup>3</sup>University of Chicago </h3>
+        <h3 id="links">
+            <a href="">CODE</a>
+            |<a href="">PAPER</a>
+        </h3>
+        <p>
+            <video width="100%" height="auto" controls>
+                <source src="statler_llm_media/corl_final.mp4" type="video/mp4">
+            </video>
+        </p>
+    </section>
+        <h2>Overview</h2>
+        <p>
+            We propose Statler, a framework that endows LLMs with an external world state model accompanied by two instances of general LLMs---a world-model reader and a world-model writer---that explicitly track and anticipate world state updates. Statler improves the capacity of existing LLMs for reasoning over longer time horizons.
+        </p>
+        <p>
+            <img src="statler_llm_media/statler_teaser.png" width="100%" height="auto" class="center">
+        </p>
+    
+    <h2 id="motivational-example">Motivational Example: Cups and balls</h2>
+        <p>
+            <img src="statler_llm_media/cups_and_balls_vis.jpeg" width="30%" height="auto" align="left">
+            To demonstrate a situation where a state-maintaining model could be helpful, we prepare a toy game "cups and balls" to illustrate its effectiveness. The game involves three visually identical cups placed upside down on a table with a ball hidden under one of the cups.  A player knows the initial location of the ball, and thereafter, the dealer swaps the location of two randomly selected cups for K rounds. When the dealer finishes swapping the cups, the player is asked to guess the location of the ball. To succeed in this game, the player needs to keep track of the location of the ball across multiple rounds of swapping so they can guess the final location.</br>
+            <!-- We set up a simple script that simulates this game with text as its interface. Prompt 1 shows the setup of our game. In line 2, the initial location of the ball is denoted by True and the following lines describe the sequence of swapping done by the dealer. After providing the model multiple in-context learning examples prior to the prompt, the model is then asked to answer the ball location by generating the list highlighted in green at the end. </br> -->
+            We prepare three different approaches that attempt to
+            solve this task: vanilla LLM, LLM with chain-of-thought
+            (CoT), and a state-maintaining LLM. The vanilla
+            LLM (see Prompt 1) provides only the final location of the
+            ball at the end given the initial location and sequence of
+            swaps. The LLM with CoT (see Prompt 2) generates the
+            sequence of ball positions after the final swapping action.
+            This triggers the model to reason over the state transitions
+            (i.e., cup positions) that can help answer the final cup loca-
+            tion. Finally, in the state-maintaining LLM (see Prompt 3),
+            the model stores and updates a state representation at every
+            step. In contrast with the other models, our model pro-
+            cesses each query step by step conditioned on the previous
+            state representation and updates it.
+            <img src="statler_llm_media/cups_and_balls_prompts.png" width="100%" height="auto" class="center">
+            In this pilot experiment, CoT does not improve over a vanilla LLM. CoT is expected to improve reasoning by spelling out the underlying thought process, which in this case, is the series of state transitions.  
+            CoT indeed tried to roll them out, but it failed to do it as well as expected. 
+            We suggest this is because CoT had to impute early transitions when the LLM had already seen all the swaps and thus it was difficult to identify and focus on the right information. 
+            The more swaps that are present, the more severe the issue becomes. Thus, the spelled out transitions are not helpful at all. Our state-maintaining model does not suffer this issue because it anticipates each state update <i>as</i> it happens. Since it is merely a prediction, it can be imperfect, but the state information is presented to the model right before it is needed, which we posit may contribute to the performance gain.
+            Next, we will present our full method---a generalized version of this simple state model---and show how effective it is in significantly more complex scenarios. 
+        </p>
+
+    <h2 id="Method">Method</h3>
+    <div>
+        <p>
+            Inspired by the concept of <i>modularity</i>, we propose to <i>split</i> the burden across multiple different prompted LLMs. 
+            Precisely, we maintain a separate prompt including instructions and demonstrations for each subtask (state tracking or query responding) and then use it to elicit an LLM to perform the particular subtask. 
+            As we will discuss shortly, our framework has a <strong> world-model reader </strong> to respond to the user query and a <strong> world-model writer </strong> to update the state representation.
+            Our framework is general and can in principle handle an arbitrary number of subtasks.
+            <img src="statler_llm_media/world_model_reader_writer.png" width="100%" height="auto" class="center">
+        </p>
+    </div>
+
+    <h2 id="compare">Compare with Vanilla LLM (code-as-policies)</h2>
+    <div>
+        <p>
+            <img src="statler_llm_media/diff_cap_1.png" width="100%" height="auto" class="center">
+            <img src="statler_llm_media/diff_cap_2.png" width="100%" height="auto" class="center">
+        </p>
+    </div>
+
+    <h2 id="Results">Results</h2>
+    <div>
+        <p>
+            The simulated domains we consider include (a) pick-and-place; (b) block disinfection, where the translucent sphere around a block represents its dirtiness (this is not visible to the robot); and (c) relative weight reasoning, where the radius of the disk under each block provides an indication of its weight. These disks are rendered there only for visual aids.
+            <img src="statler_llm_media/experiments.png" width="100%" height="auto" class="center">
+            We observe that our state-maintaining LLM outperforms the vanilla LLM in all three domains in terms of (normalized) successful steps and success rate.
+            <img src="statler_llm_media/table_1.png" width="100%" height="auto" class="center">
+            <img src="statler_llm_media/table_2.png" width="100%" height="auto" class="center">
+        </p>
+    </div>
+
+    <h2 id="real-robot-experiments">Real Robot Experiments</h2>
+    <div>
+        <p>
+           In order to validate our method on a real robot, we implement it on a UR5 arm in a similar tabletop domain as the simulated experiments. Because ground-truth position of objects is not available, unlike in simulation, we use MDETR, an open-vocabulary segmentation model, to obtain segmentation masks for objects from an RGB camera on the gripper. The following is a demo for the sequence ``Put the black cup on the yellow block. Put the yellow block on the Rubik's cube.'' In order to accomplish this successfully, the robot must remove the black cup from the yellow block to place the block on the Rubik's cube, but the vanilla approach fails. Notice in particular that the yellow block stays covered. Frames are arranged temporally from left to right, with intermediate ones taken as the robot places an object.
+           <img src="statler_llm_media/real_robots_exp.png" width="100%" height="auto" class="center">
+        </p>
+    </div>
+
+    <h2>BibTex</h2>
+    <pre></pre>
+
+</article>
+</body>
+</html>
