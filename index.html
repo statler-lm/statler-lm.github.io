@@ -62,24 +62,22 @@
             <img src="statler_llm_media/statler_teaser.png" width="100%" height="auto" class="center">
         </p>
     
-    <h2 id="motivational-example">Motivational Example: Cups and balls</h2>
+    <h2 id="motivational-example">Motivational Example: Three-cups-and-ball shell game</h2>
         <p>
             <img src="statler_llm_media/cups_and_balls_vis.jpeg" width="30%" height="auto" align="left">
-            To demonstrate a situation where a state-maintaining model could be helpful, we prepare a toy game "cups and balls" to illustrate its effectiveness. The game involves three visually identical cups placed upside down on a table with a ball hidden under one of the cups.  A player knows the initial location of the ball, and thereafter, the dealer swaps the location of two randomly selected cups for K rounds. When the dealer finishes swapping the cups, the player is asked to guess the location of the ball. To succeed in this game, the player needs to keep track of the location of the ball across multiple rounds of swapping so they can guess the final location.</br>
+            To demonstrate a situation where a state-maintaining model could be helpful, we prepare a toy three-cups-and-ball shell game to illustrate its effectiveness. The game involves three visually identical cups placed upside down on a table with a ball hidden under one of the cups.  A player knows the initial location of the ball, and thereafter, the dealer swaps the location of two randomly selected cups for K rounds. When the dealer finishes swapping the cups, the player is asked to guess the location of the ball. To succeed in this game, the player needs to keep track of the location of the ball across multiple rounds of swapping so they can guess the final location.</br>
             <!-- We set up a simple script that simulates this game with text as its interface. Prompt 1 shows the setup of our game. In line 2, the initial location of the ball is denoted by True and the following lines describe the sequence of swapping done by the dealer. After providing the model multiple in-context learning examples prior to the prompt, the model is then asked to answer the ball location by generating the list highlighted in green at the end. </br> -->
             We prepare three different approaches that attempt to
-            solve this task: vanilla LLM, LLM with chain-of-thought
-            (CoT), and a state-maintaining LLM. The vanilla
+            solve this task: a vanilla LLM, an LLM with chain-of-thought
+            (CoT), and a state-maintaining LLM, which is a simplified version of our Statler model. The vanilla
             LLM (see Prompt 1) provides only the final location of the
             ball at the end given the initial location and sequence of
             swaps. The LLM with CoT (see Prompt 2) generates the
             sequence of ball positions after the final swapping action.
             This triggers the model to reason over the state transitions
-            (i.e., cup positions) that can help answer the final cup loca-
-            tion. Finally, in the state-maintaining LLM (see Prompt 3),
+            (i.e., cup positions) that can help answer the final cup location. Finally, in the state-maintaining LLM (see Prompt 3),
             the model stores and updates a state representation at every
-            step. In contrast with the other models, our model pro-
-            cesses each query step by step conditioned on the previous
+            step. In contrast with the other models, our model processes each query step by step conditioned on the previous
             state representation and updates it.
             <img src="statler_llm_media/cups_and_balls_prompts.png" width="100%" height="auto" class="center">
             In this pilot experiment, CoT does not improve over a vanilla LLM. CoT is expected to improve reasoning by spelling out the underlying thought process, which in this case, is the series of state transitions.  
